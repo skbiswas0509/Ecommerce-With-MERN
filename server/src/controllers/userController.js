@@ -1,6 +1,7 @@
 const createError = require("http-errors");
 const jwt = require('jsonwebtoken');
 const fs = require("fs").promises;
+const bcrypt = require('bcryptjs');
 const User = require("../models/userModel");
 const { successResponse } = require("./responseController");
 const { findWithId } = require("../services/findItem");
@@ -196,5 +197,33 @@ const handleManageUserStatusById = async (req, res, next) => {
     }
 }
 
+const handleUpdatePassword = async (req, res, next) => {
+    try {
+        const { oldPassword, newPassword} = req.body;
+        const userId = req.params.id;
+        const user = await findUserById(User, userId);
+        
+        const isPasswordMatch = await bcrypt.compare(oldPassword, user.password);
+        if(!isPasswordMatch){
+            throw createError(401, 'Old password is not correct');
+        }
+        const filter = {userId};
+        const update = {$set: {password: newPassword}}
+        const updateOptions = {new: true};
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            updates,
+            updateOptions
+        ).select('-password');
 
-module.exports = {getUsers, handleGetUserById, deleteUserById, processRegister, activateUserAccount, handleUpdateUserById, handleManageUserStatusById}
+        return successResponse(res, {
+            statusCode: 200,
+            message: "password was updated",
+            payload: user,
+        })
+    } catch (error) {
+        throw error
+    }
+}
+
+module.exports = {getUsers, handleGetUserById, deleteUserById, processRegister, activateUserAccount, handleUpdateUserById, handleManageUserStatusById, handleUpdatePassword}

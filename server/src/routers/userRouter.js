@@ -1,5 +1,5 @@
 const express = require("express");
-const { getUsers, getUserById, deleteUserById, processRegister, activateUserAccount, updateUserById, handleBanUserById, handleUnbanUserById } = require("../controllers/userController");
+const { getUsers, getUserById, deleteUserById, processRegister, activateUserAccount, updateUserById, handleBanUserById, handleUnbanUserById, handleUpdatePassword } = require("../controllers/userController");
 const uploadUserImage = require("../../middlewares/uploadFile");
 const { validateUserRegistration } = require("../validatiors/auth");
 const {isLoggedIn, isLoggedOut, isAdmin} = require("../middlewares/auth")
@@ -16,7 +16,7 @@ userRouter.post('/verify', activateUserAccount);
 userRouter.put("/:id", uploadUserImage.single('image'),isLoggedIn, handleUpdateUserById);
 userRouter.post('/activate',isLoggedOut, activateUserAccount);
 userRouter.put('/manage-user/:id', isLoggedIn, isAdmin, handleManagerUserStatusById);
-
+userRouter.put('/update-password', isLoggedIn, validateUserRegistration, runValidation, handleUpdatePassword)
 
 
 module.exports = userRouter;
