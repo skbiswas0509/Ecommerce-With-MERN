@@ -30,4 +30,4 @@ const uploadUserImage = multer({
   fileFilter:fileFilter
 })
 
-module.exports = uploadUserImage;
+module.exports = {uploadUserImage, fileFilter, userStorage};

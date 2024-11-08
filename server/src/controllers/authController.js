@@ -21,18 +21,21 @@ const handleLogin = async (req, res, next) => {
         if (user.isBanned) {
             throw createError(403, "You are banned.");
         }
+
         // generating tokens, cookies
-        const accessToken = createJSONWebToken({_id: user._id},
-        jwtAccessKey,'10m');
+        const accessToken = createJSONWebToken({user},
+        jwtAccessKey,'15m');
         res.cookie('access_token', accessToken,{
             maxAge: 15* 60 * 1000, // 15 min,
             httpOnly: true,
             secure: true,
             sameSite: 'none',
         })
+
+        const userWithoutPassword = await User.findOne({ email }).select('-password');
         return successResponse(res, {statusCode: 200,
             message: "Login successful",
-            payload: {}
+            payload: {userWithoutPassword},
         })
     }catch (error) {
         next(error);
