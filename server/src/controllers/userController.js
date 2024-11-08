@@ -9,39 +9,23 @@ const { createJSONWebToken } = require("../helper/jsonwebtoken");
 const { jwtActivationKey, clientURL } = require("../secret");
 const emailWithNodeMail = require("../helper/email");
 const runValidation = require("../validatiors");
+const { handleUserAction, findUsers, findUserById, updateUserById } = require("../services/userService");
 
 
-const getUsers = async (req,res, next)=>{
+const handleGetUsers = async (req,res, next)=>{
     try {
         const search = req.query.search || "";
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 5;
 
-        const searchRegExp = new RegExp(".*" + search + ".*", 'i');
-        const filter = {
-            isAdmin: {$ne: true},
-            $or:[
-                {name: {$regex: searchRegExp}},
-                {email: {$regex: searchRegExp}},
-                {phone: {$regex: searchRegExp}},
-            ]
-        };
-        const options = {password: 0}
-
-        const users = await User.find(filter, options).limit(limit).skip((page-1) * limit)
-        const count = await User.find(filter).countDocuments();
-
-        if(!users) throw createError(404, "No users found.")
+        const {users, pagination} = await findUsers(search, limit, page);
 
         return successResponse(res, {
             statusCode: 200,
             message: "Users were returned successfully",
-            payload: users,
-            pagination :{
-                totalPages: Math.ceil(count / limit),
-                currentPage: page,
-                previosPage: page - 1 > 0 ? page-1 : null,
-                nextPage: page + 1 <= Math.ceil(count / limit) ? page +1 : null,
+            payload:{
+                users: users,
+                pagination: pagination,
             }
         })
     } catch (error) {
@@ -49,11 +33,11 @@ const getUsers = async (req,res, next)=>{
     }
 }
 
-const getUserById = async (req,res, next)=>{
+const handleGetUserById = async (req,res, next)=>{
     try {
         const id = req.params.id;
         const options = {password: 0};
-        const user = await findWithId(User, id, options);
+        await deleteUserById(id, options);
 
         return successResponse(res, {
             statusCode: 200,
@@ -173,39 +157,12 @@ const activateUserAccount = async (req, res, next)=> {
     }
 }
 
-const updateUserById = async (req,res, next)=>{
+const handleUpdateUserById = async (req,res, next)=>{
     try {
         const userId = req.params.id;
-        const options = { passwords: 0 }
-        const user = await findWithId(User, id, options);
-        const updateOptions = {new: true, runValidators: true, context: 'query'};
         
-        let updates = {};
-
-        for(let key in req.body){
-            if(['name', , 'password', 'phone', 'address'].includes
-                (key)){
-                    updates[key]=req.body[key];
-                }
-            else if(['email'].includes(key)){
-                throw createError(400, "Email cant be updated")
-                }
-        }
-        const image = req.file;
-        if(image){
-            if(image.size > 1024 * 1024 * 2){
-                throw createError(400, 'Image file size is biggerthan 2 MB')
-            }
-            updates.image = image.buffer.toString('base64');
-            user.image != 'default.jpeg' && deleteImage(user.image);
-        }
-
-        const updatedUser = await User.findByIdAndUpdate(userId, updates, updateOptions).select("-password");
-
-        if(!updatedUser){
-            throw createError(404, 'User with this id doesnot exist')
-        }
-
+        const updatedUser = await updateUserById(userId, req)
+        
         return successResponse(res, {
             statusCode: 200,
             message: "Users were updated successfully",
@@ -217,55 +174,27 @@ const updateUserById = async (req,res, next)=>{
     }
 }
 
-const handleBanUserById = async (req, res, next) => {
+const handleManageUserStatusById = async (req, res, next) => {
     try {
         const userId = req.params.id;
-        await findWithId(User, userId);
-        const updates = {isBanned: true};
-        const updateOptions = { new: true, runValidators: true, context: 'query'};
+        const action = req.body.action;
 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            updates,
-            updateOptions,
-        ).select('-password')
-
-        if(!updatedUser){
-            throw createError(400, "User wasnt banned")
-        }
-
+        const successMessage = await handleUserAction(action, userId);
         return successResponse(res, {
             statusCode: 200,
-            message: "user was banned successfully",
-        });
+            message: "Users were returned successfully",
+            payload: users,
+            pagination :{
+                totalPages: Math.ceil(count / limit),
+                currentPage: page,
+                previosPage: page - 1 > 0 ? page-1 : null,
+                nextPage: page + 1 <= Math.ceil(count / limit) ? page +1 : null,
+            }
+        })
     } catch (error) {
         next(error);
     }
 }
 
-const handleUnbanUserById = async (req, res, next) => {
-    try {
-        const userId = req.params.id;
-        await findWithId(User, userId);
-        const updates = {isBanned: false};
-        const updateOptions = { new: true, runValidators: true, context: 'query'};
 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            updates,
-            updateOptions,
-        ).select('-password')
-
-        if(!updatedUser){
-            throw createError(400, "User wasnt unbanned")
-        }
-
-        return successResponse(res, {
-            statusCode: 200,
-            message: "user was unbanned successfully",
-    });
-    } catch (error) {
-        next(error);
-    }
-}
-module.exports = {getUsers, getUserById, deleteUserById, processRegister, activateUserAccount, updateUserById, handleBanUserById, handleUnbanUserById}
+module.exports = {getUsers, handleGetUserById, deleteUserById, processRegister, activateUserAccount, handleUpdateUserById, handleManageUserStatusById}
