@@ -7,10 +7,12 @@ const { successResponse } = require("./responseController");
 const { findWithId } = require("../services/findItem");
 const deleteImage = require("../helper/deleteImageHelper");
 const { createJSONWebToken } = require("../helper/jsonwebtoken");
-const { jwtActivationKey, clientURL } = require("../secret");
+const { jwtActivationKey, clientURL, jwtResetPasswordKey } = require("../secret");
 const emailWithNodeMail = require("../helper/email");
 const runValidation = require("../validatiors");
-const { handleUserAction, findUsers, findUserById, updateUserById } = require("../services/userService");
+const { handleUserAction, findUsers, findUserById, updateUserById, updateUserPasswordById, resetPassword } = require("../services/userService");
+const checkUserExist = require("../helper/checkUserExist");
+const sendEmail = require("../helper/sendEmail");
 
 
 const handleGetUsers = async (req,res, next)=>{
@@ -51,11 +53,11 @@ const handleGetUserById = async (req,res, next)=>{
     }
 }
 
-const deleteUserById = async (req,res, next)=>{
+const handleDeleteUserById = async (req,res, next)=>{
     try {
         const id = req.params.id;
         const options = {password: 0};
-        const user = await findWithId(User, id, options);
+        await findWithId(User, id, options);
 
         const deletedUser = await User.findByIdAndDelete({_id:id, isAdmin: false})
 
@@ -73,7 +75,7 @@ const deleteUserById = async (req,res, next)=>{
     }
 }
 
-const processRegister = async (req, res, next)=> {
+const handleProcessRegister = async (req, res, next)=> {
     try {
         const {name, email, password, phone, address} = req.body;
         
@@ -87,7 +89,7 @@ const processRegister = async (req, res, next)=> {
         }
 
         const imageBufferString = image.buffer.toString('base64')
-        const userExists = await User.exists({email: email});
+        const userExists = await checkUserExist(email)
         if(userExists){
             throw createError(409, 'User with this email already exists.')
         }
@@ -109,26 +111,19 @@ const processRegister = async (req, res, next)=> {
             <p>Please click here to link to <a href="${clientURL}/api/users/acitvate/${token}" target="_blank"> activate your account </a></p>
             `
         }
-
-            // send email
-        try {
-            await emailWithNodeMail(emailData);
-        } catch (emailError) {
-            next(createError(500, 'Failed to send verification email'));
-            return;
-        }
+        sendEmail(emailData);
 
         return successResponse(res, {
             statusCode: 200,
             message: `Please go to your ${email} for completeing registration process`,
-            paylod: {token},
+
         })
         } catch (error) {
             next(error)
         }
 }
 
-const activateUserAccount = async (req, res, next)=> {
+const handleActivateUserAccount = async (req, res, next)=> {
     try {
         const token = req.body.token;
         if(!token) throw createError(404, "token not found.");
@@ -199,22 +194,12 @@ const handleManageUserStatusById = async (req, res, next) => {
 
 const handleUpdatePassword = async (req, res, next) => {
     try {
-        const { oldPassword, newPassword} = req.body;
-        const userId = req.params.id;
-        const user = await findUserById(User, userId);
+        //email, oldPassword, new
         
-        const isPasswordMatch = await bcrypt.compare(oldPassword, user.password);
-        if(!isPasswordMatch){
-            throw createError(401, 'Old password is not correct');
-        }
-        const filter = {userId};
-        const update = {$set: {password: newPassword}}
-        const updateOptions = {new: true};
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            updates,
-            updateOptions
-        ).select('-password');
+        const { email, oldPassword, newPassword, confirmedPassword} = req.body;
+        const userId = req.params.id;
+        
+        await updateUserPasswordById(userId, email, oldPassword, newPassword, confirmedPassword);
 
         return successResponse(res, {
             statusCode: 200,
@@ -226,4 +211,36 @@ const handleUpdatePassword = async (req, res, next) => {
     }
 }
 
-module.exports = {getUsers, handleGetUserById, deleteUserById, processRegister, activateUserAccount, handleUpdateUserById, handleManageUserStatusById, handleUpdatePassword}
+const handleForgetPassword = async (req, res, next) => {
+    try {
+        const { email } =req.body;
+        
+        const token = await forgetPasswordByEmail(email)
+
+        sebdEmail(emailData);
+        return successResponse(res, {
+            statusCode: 200,
+            message: `Please go to your ${email} for resetting password`,
+            payload: {token}
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+
+const handleResetPassword = async (req, res, next) => {
+    try {
+
+        return successResponse(res, {
+            statusCode: 200,
+            message: "password was reset updated",
+        })
+    } catch (error) {
+        throw error
+    }
+}
+
+module.exports = {handleGetUsers, handleGetUserById, handleDeleteUserById, handleProcessRegister, 
+    handleActivateUserAccount, handleUpdateUserById, handleManageUserStatusById, 
+    handleUpdatePassword, handleForgetPassword, handleResetPassword}

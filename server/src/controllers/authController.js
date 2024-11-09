@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const { successResponse } = require('./responseController');
+const { jwtAcessKey } = require('../secret');
+const { setAccessTokenCookie, setRefreshTokenCookie } = require('../helper/cookie');
 
 const handleLogin = async (req, res, next) => {
     try {
@@ -25,14 +27,14 @@ const handleLogin = async (req, res, next) => {
         // generating tokens, cookies
         const accessToken = createJSONWebToken({user},
         jwtAccessKey,'15m');
-        res.cookie('access_token', accessToken,{
-            maxAge: 15* 60 * 1000, // 15 min,
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-        })
+        setAccessTokenCookie(res, accessToken);
 
-        const userWithoutPassword = await User.findOne({ email }).select('-password');
+        const refreshToken = createJSONWebToken({user},
+            jwtRefreshKey,'7d');
+        setRefreshTokenCookie(res, refreshToken);
+
+        const userWithoutPassword = user.toObject()
+        delete userWithoutPassword.password;
         return successResponse(res, {statusCode: 200,
             message: "Login successful",
             payload: {userWithoutPassword},
@@ -45,6 +47,7 @@ const handleLogin = async (req, res, next) => {
 const handleLogout = async(req, res, next) => {
     try {
         res.clearCookie('accessToken');
+        res.clearCookie('refreshToken');
         return successResponse(res, {
             statusCode: 200,
             message: "Users logout successfully.",
@@ -54,4 +57,47 @@ const handleLogout = async(req, res, next) => {
         next(error)
     }
 }
-module.exports = {handleLogin, handleLogout};
+
+const handleRefreshToken = async(req, res, next) => {
+    try {
+        const oldRefreshToken = req.cookies.refreshToken;
+
+        //verify th old efresh token
+        const decodedToken = jwt.verify(oldRefreshToken, jwtRefreshKey)
+        if(!decodedToken){
+            throw createError(401, 'Invalid refresh token');
+        }
+        const accessToken = createJSONWebToken(decodedToken.user,
+            jwtAccessKey,'15m');
+            setAccessTokenCookie(res, accessToken);
+
+        return successResponse(res, {
+            statusCode: 200,
+            message: "New access token generated.",
+            payload: {}
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+const handleProtectedRoute = async(req, res, next) => {
+    try {
+        const accessToken = req.cookies.accessToken;
+
+        //verify th old efresh token
+        const decodedToken = jwt.verify(accessToken, jwtAcessKey)
+        if(!decodedToken){
+            throw createError(401, 'Invalid refresh token');
+        }
+        return successResponse(res, {
+            statusCode: 200,
+            message: "Protected resources accessed",
+            payload: {}
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+module.exports = {handleLogin, handleLogout, 
+    handleRefreshToken, handleProtectedRoute};
