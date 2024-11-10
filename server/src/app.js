@@ -12,6 +12,8 @@ const errorResponse = require("./controllers/responseController");
 const authRouter = require("./routers/authRouter");
 const { cookie } = require("express-validator");
 const cookieParser = require("cookie-parser");
+const categoryRouter = require("./routers/categoryRouter");
+const productRouter = require("./routers/productRouter");
 const app = express();
 
 const rateLimiter = rateLimit({
@@ -29,7 +31,9 @@ app.use(bodyParser.urlencoded({ extended: true}));
 
 app.use("/api/users", userRouter);
 app.use("/api/seed", seedRouter);
-app.user("api/auth", authRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/categories", categoryRouter);
+app.use("/api/products", productRouter);
 
 app.get("/api/users", (req,res)=>{
     console.log(req.body.id);

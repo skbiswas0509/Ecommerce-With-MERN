@@ -3,7 +3,7 @@ const { handleBanUserById, handleUnbanUserById, handleUpdatePassword, handleForg
 const uploadUserImage = require("../../middlewares/uploadFile");
 const { validateUserRegistration, validateUserForgetPassword, validateUserResetPassword } = require("../validatiors/auth");
 const {isLoggedIn, isLoggedOut, isAdmin} = require("../middlewares/auth")
-const runValidation = require("../validatiors");
+const runValidation = require("../validators");
 const userRouter = express.Router();
 const { isLoggedIn, handleManagerUserStatusById } = require("../middlewares/auth.js");
 

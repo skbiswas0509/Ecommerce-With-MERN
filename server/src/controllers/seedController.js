@@ -1,5 +1,6 @@
 const data = require("../data");
 const User = require("../models/userModel");
+co
 
 const seedUser = async (req,res,next) => {
     try {
@@ -16,4 +17,16 @@ const seedUser = async (req,res,next) => {
     }
 };
 
-module.exports = {seedUser};
+const seedProducts = async(req, res, next) => {
+    try {
+        await Product.deleteMany({});
+
+        const products = await Product.insertMany(data.products);
+
+        return res.status(201).json(products);
+    } catch (error) {
+        next(error);
+    }
+}
+
+module.exports = {seedUser, seedProducts};
