@@ -1,5 +1,5 @@
 const multer = require('multer');
-const { ALLOWED_FILE_TYPES, MAX_FILE_SIZE } = require('../src/config');
+const { ALLOWED_FILE_TYPES, MAX_FILE_SIZE, UPLOAD_PRODUCT_IMG_DIRECTORY } = require('../src/config');
 
 
 const userStorage = multer.diskStorage({
@@ -11,6 +11,15 @@ const userStorage = multer.diskStorage({
   }
 });
   
+const productStorage = multer.diskStorage({
+  destination: function(req, res, cb) {
+    cb(null, UPLOAD_PRODUCT_IMG_DIRECTORY);
+  },
+  filename: function (req, file, cb){
+    cb(null, Date.now()+ '-' + file.originalname);
+  }
+})
+
 const fileFilter = (req,file,cb) => {
     if(!file.mimetype.startWith('image/')){
       return cb(new Error('Only Image files are allowed'), false);
@@ -30,4 +39,10 @@ const uploadUserImage = multer({
   fileFilter:fileFilter
 })
 
-module.exports = {uploadUserImage, fileFilter, userStorage};
+const uploadProductImage = multer({
+  storage: productStorage,
+  limits: {fileSize: MAX_FILE_SIZE},
+  fileFilter: fileFilter
+})
+
+module.exports = {uploadUserImage, uploadProductImage, fileFilter, userStorage};

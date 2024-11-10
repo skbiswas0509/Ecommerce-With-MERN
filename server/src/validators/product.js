@@ -23,6 +23,9 @@ const validateProduct = [
     .withMessage('Product quantity is required')
     .isInt({ min: 1})
     .withMessage('Product qunatity must be a positive integer'),
+
+    body('image').optional().isString()
+    .withMessage('Product image is optional'),
 ]
 
 module.exports = {validateProduct}

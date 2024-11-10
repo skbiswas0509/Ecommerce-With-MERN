@@ -1,6 +1,6 @@
 const express = require("express");
 const { handleBanUserById, handleUnbanUserById, handleUpdatePassword, handleForgetPassword, handleResetPassword, handleGetUsers, handleDeleteUserById, handleProcessRegister, handleActivateUserAccount } = require("../controllers/userController");
-const uploadUserImage = require("../../middlewares/uploadFile");
+const {uploadUserImage} = require("../../middlewares/uploadFile");
 const { validateUserRegistration, validateUserForgetPassword, validateUserResetPassword } = require("../validatiors/auth");
 const {isLoggedIn, isLoggedOut, isAdmin} = require("../middlewares/auth")
 const runValidation = require("../validators");

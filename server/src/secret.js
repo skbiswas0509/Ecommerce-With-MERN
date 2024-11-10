@@ -17,4 +17,5 @@ const clientURL = process.env.CLIENT_URL || '';
 
 
 
-module.exports = {serverPort, mongodbUrl, defaultImagePath, jwtActivationKey, smtpUsername, smtpPassword, clientURL, jwtAcessKey, jwtResetPasswordKey, jwtRefreshKey}
+module.exports = {serverPort, mongodbUrl, defaultImagePath, jwtActivationKey, smtpUsername, smtpPassword, clientURL, 
+    jwtAcessKey, jwtResetPasswordKey, jwtRefreshKey}
