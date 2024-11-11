@@ -2,7 +2,7 @@ const createError = require("http-errors");
 
 const { successResponse } = require("./responseController");
 const { default: slugify } = require("slugify");
-const { createProduct, getProducts } = require("../services/productService");
+const { createProduct, getProducts, deleteProductBySlug, updateProductBySlug } = require("../services/productService");
 const Product = require("../models/productModel");
 
 const handleCreateProduct = async(req, res, next) => {
@@ -23,10 +23,18 @@ const handleCreateProduct = async(req, res, next) => {
 
 const handleGetProducts = async (req, res, next) =>{
     try {
+        const search = req.query.search || "";
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 5;
         
-        const productsData = await getProducts(page, limit);
+        const searchRegExp = new RegExp('.*' + search + '.*', 'i');
+        const filter = {
+            isAdmin: {$ne: true},
+            $or: [
+                {name: { $regex: searchRegExp}}
+            ],
+        };
+        const productsData = await getProducts(page, limit, filter);
 
 
         return successResponse(res, {
@@ -61,5 +69,32 @@ const handleGetProduct = async (req, res, next) => {
     }
 }
 
+const handleDeleteProduct = async (req, res, next) => {
+    try {
+        const {slug } = req.params;
+        await deleteProductBySlug(slug);
+        return successResponse(res, {
+            statusCode: 200,
+            message: 'Deleted the product',
+        })
+    } catch (error) {
+        next(error);
+    }
+}
+
+const handleUpdateProduct = async(req, res, next) =>{
+    try {
+        const {slug} = req.params;
+        const updatedProduct = await updateProductBySlug(req, slug)
+        return successResponse(res, {
+            statusCode: 200,
+            message: 'Updated the product',
+            payload: updatedProduct
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
 module.exports = {handleCreateProduct, handleGetProducts, 
-    handleGetProduct}
+    handleGetProduct, handleDeleteProduct, handleUpdateProduct}

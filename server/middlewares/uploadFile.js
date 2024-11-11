@@ -3,18 +3,18 @@ const { ALLOWED_FILE_TYPES, MAX_FILE_SIZE, UPLOAD_PRODUCT_IMG_DIRECTORY } = requ
 
 
 const userStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOAD_USER_IMG_DIRECTORY);
-  },
+  // destination: function (req, file, cb) {
+  //   cb(null, UPLOAD_USER_IMG_DIRECTORY);
+  // },
   filename: function (req, file, cb){
     cb(null, Date.now() + '-' + file.originalname);
   }
 });
   
 const productStorage = multer.diskStorage({
-  destination: function(req, res, cb) {
-    cb(null, UPLOAD_PRODUCT_IMG_DIRECTORY);
-  },
+  // destination: function(req, res, cb) {
+  //   cb(null, UPLOAD_PRODUCT_IMG_DIRECTORY);
+  // },
   filename: function (req, file, cb){
     cb(null, Date.now()+ '-' + file.originalname);
   }

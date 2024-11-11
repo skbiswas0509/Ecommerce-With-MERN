@@ -6,6 +6,7 @@ const User = require("../models/userModel");
 const createJSONWebToken = require("../helper/jsonwebtoken");
 const { jwtResetPasswordKey, clientURL } = require('../secret');
 const { findWithId } = require('./findItem');
+const { deleteFileFromCloudinary } = require('../helper/cloudinaryHelper');
 
 
 
@@ -61,6 +62,13 @@ const findUserById = async(id, options={}) => {
 
 const deleteUserById = async(id, options={}) => {
     try {
+        const existingUser = await User.findOne({_id: id})
+
+        if(existingUser && existingUser.image){
+            const publicId = await publicIdWithoutExtensionFromUrl(existingUser.image);
+            deleteFileFromCloudinary("ecommerceMern/users", publicId, 'User');
+        }
+
         const user = await User.findByIdAndDelete({
             _id: id,
             isAdmin: false,

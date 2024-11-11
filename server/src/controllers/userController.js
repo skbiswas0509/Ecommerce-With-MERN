@@ -13,13 +13,24 @@ const runValidation = require("../validatiors");
 const { handleUserAction, findUsers, findUserById, updateUserById, updateUserPasswordById, resetPassword } = require("../services/userService");
 const checkUserExist = require("../helper/checkUserExist");
 const sendEmail = require("../helper/sendEmail");
-
+const cloudinary = require("../config/cloudinary")
 
 const handleGetUsers = async (req,res, next)=>{
     try {
         const search = req.query.search || "";
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 5;
+
+        const searchRegExp = new RegExp('.*' + search + '.*', 'i');
+        const filter = {
+            isAdmin: {$ne: true},
+            $or: [
+                {name: { $regex: searchRegExp}},
+                {email: { $regex: searchRegExp}},
+                {phone: { $regex: searchRegExp}}
+            ],
+        };
+        const options = { password: 0}
 
         const {users, pagination} = await findUsers(search, limit, page);
 
@@ -135,7 +146,13 @@ const handleActivateUserAccount = async (req, res, next)=> {
         if(userExists){
             throw createError(409, 'User with this email already exists.')
         }
-        
+        const image = decoded.image;
+        if(image){
+            const response = await cloudinary.uploader.upload(image, {
+                folder: 'ecommerceMern',
+            });
+            decoded.image = response.secure_url;
+        }
         await User.create(decoded)
         return successResponse(res, {
             statusCode: 201,
