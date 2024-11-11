@@ -149,7 +149,7 @@ const handleActivateUserAccount = async (req, res, next)=> {
         const image = decoded.image;
         if(image){
             const response = await cloudinary.uploader.upload(image, {
-                folder: 'ecommerceMern',
+                folder: 'ecommerceMern/users',
             });
             decoded.image = response.secure_url;
         }

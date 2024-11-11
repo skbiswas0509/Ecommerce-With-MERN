@@ -1,7 +1,10 @@
+const cloudinary = require("../config/cloudinary")
+
 const createError = require("http-errors");
 const Product = require("../models/productModel");
 const { default: slugify } = require("slugify");
-const { deleteFileFromCloudinary } = require("../helper/cloudinaryHelper");
+const { deleteFileFromCloudinary, publicIdWithoutExtensionFromUrl } = require("../helper/cloudinaryHelper");
+
 
 const createProduct = async(productData, image) => {
 
@@ -9,7 +12,10 @@ const createProduct = async(productData, image) => {
         throw createError(400, 'File too large');
     }
     if(image){
-        productData.image = image;
+        const response = await cloudinary.uploader.upload(image, {
+            folder: 'ecommerceMern/products',
+        });
+        decoded.image = response.secure_url;
     }
     const { name, description, price, quantity, shipping, category, imageBufferString} = productData;
     const productExists = await Product.exists({name: productData.name});
@@ -80,8 +86,10 @@ const updateProductBySlug = async (req, slug) => {
             if(image.size > 1024 * 1024 * 2) {
                 throw new Error('FIle too large.');
             }
-            updates.image = image;
-            product.image != 'default.jpeg' && deleteImage(product.image);
+            const response = await cloudinary.uploader.upload(image,{
+                folder: 'ecommerce/products',
+            });
+            updates.image = response.secure_url;
         }
         
         const updatedProduct = await Product.findOneAndUpdate(
@@ -91,6 +99,12 @@ const updateProductBySlug = async (req, slug) => {
         if(!updatedProduct){
             throw createError(404, 'Product update was not possible');
         }
+
+        if(product.image){
+            const publicId = await publicIdWithoutExtensionFromUrl(product.image);
+            await deleteFileFromCloudinary('ecommerceMern/products',publicId,'Product');
+        }
+        
         return updatedProduct;
     } catch (error) {
         

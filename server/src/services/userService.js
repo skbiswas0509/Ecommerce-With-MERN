@@ -6,7 +6,7 @@ const User = require("../models/userModel");
 const createJSONWebToken = require("../helper/jsonwebtoken");
 const { jwtResetPasswordKey, clientURL } = require('../secret');
 const { findWithId } = require('./findItem');
-const { deleteFileFromCloudinary } = require('../helper/cloudinaryHelper');
+const { deleteFileFromCloudinary, publicIdWithoutExtensionFromUrl } = require('../helper/cloudinaryHelper');
 
 
 
@@ -89,6 +89,10 @@ const updateUserById = async(userId, req) => {
         const options = { password: 0};
         const user = await findWithId(User, userId, options);
      
+        if(!user){
+            return createError(404, "User not found");
+        }
+
         const updateOptions = { new: true, runValidators: true, contenct: "query"};
         let updates = {};
         const allowedFields = ['name', 'password', 'phone', 'address']
@@ -100,19 +104,26 @@ const updateUserById = async(userId, req) => {
                 throw createError(400, "Email cant be updated")
                 }
         }
-        const image = req.file;
+        const image = req.file?.path;
         if(image){
             if(image.size > 1024 * 1024 * 2){
                 throw createError(400, 'Image file size is biggerthan 2 MB')
             }
-            updates.image = image.buffer.toString('base64');
-            user.image != 'default.jpeg' && deleteImage(user.image);
+            const response = await cloudinary.uploader.upload(image, {
+                folder: 'ecommerce/users',
+            })
+            updates.image = resposen.secure_url;
         }
 
         const updatedUser = await User.findByIdAndUpdate(userId, updates, updateOptions);
 
         if(!updatedUser){
             throw createError(404, 'User with this id doesnot exist')
+        }
+        if(user.image){
+            const publicId = await publicIdWithoutExtensionFromUrl(user.image);
+            await deleteFileFromCloudinary('ecommerceMern/users',
+                publicId, 'User');
         }
         return updatedUser;
     } catch (error) {
